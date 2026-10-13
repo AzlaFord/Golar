@@ -11,8 +11,7 @@ type StudentJson struct {
 	FullName   string `json:"FullName"`
 	Gmail      string `json:"Gamil"`
 	ProfilePic string `json:"ProfilePic"`
-	Avg        uint   `json: avg`
-	Grades     []uint `json: "grades"`
+	Avg        uint   `json: Avg`
 }
 
 func GetStudent(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +22,6 @@ func GetStudent(w http.ResponseWriter, r *http.Request) {
 		Gmail:      student().Gmail,
 		ProfilePic: student().ProfilePic,
 		Avg:        student().Avg,
-		Grades:     student().Grades,
 	}
 	// if err != nil {
 	// 	w.WriteHeader(http.StatusBadRequest)

@@ -5,19 +5,25 @@ import (
 )
 
 type Class struct {
-	Code     uint `gorm:"primaryKey"`
-	Students []Student
-	Teachers [1]Teacher
+	Code     uint    `gorm:"primaryKey"`
+	Student  Student `gorm:"references:Code"`
+	Teachers Teacher
+}
+
+type Grades struct {
+	gorm.Model
+	Code         uint `gorm:"primaryKey"`
+	Grade        uint
+	Student_Code Student `gorm:"foreignKey:Code"`
 }
 
 type Student struct {
 	gorm.Model
-	Code       uint   `gorm:"primaryKey" json:"Code"`
-	FullName   string `json:""`
+	Code       uint `gorm:"primaryKey"`
+	FullName   string
 	Gmail      string
 	ProfilePic string
 	Avg        uint
-	Grades     []uint `gorm:"serializer:json"`
 }
 type Teacher struct {
 	Code       uint `gorm:"primaryKey"`
