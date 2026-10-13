@@ -1,25 +1,26 @@
 package db
 
 import (
-	"github.com/google/pprof/profile"
 	"gorm.io/gorm"
 )
 
-type Grades struct {
-	avg    uint
-	grades [25]uint
+type Class struct {
+	Code     uint `gorm:"primaryKey"`
+	Students []Student
+	Teachers [1]Teacher
 }
 
 type Student struct {
 	gorm.Model
-	Code       uint
+	Code       uint `gorm:"primaryKey"`
 	FullName   string
-	Score      Grades
 	Gmail      string
 	ProfilePic string
+	avg        uint
+	grades     [25]uint
 }
 type Teacher struct {
-	Code       uint
+	Code       uint `gorm:"primaryKey"`
 	Gmail      string
 	ProfilePic string
 	FullName   string

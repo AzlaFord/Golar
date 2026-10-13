@@ -3,6 +3,7 @@ package startup
 import (
 	"context"
 	"errors"
+	"example/hello/handle"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,7 +14,7 @@ const keyServerAddr = "serverAddr"
 func Server() {
 	mux := http.NewServeMux()
 	ctx, cancelCtx := context.WithCancel(context.Background())
-
+	mux.HandleFunc("/Student", handle.GetStudent)
 	serverOne := &http.Server{
 		Addr:    ":3333",
 		Handler: mux,
