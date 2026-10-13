@@ -1,12 +1,39 @@
 package handle
 
 import (
+	"encoding/json"
 	"example/hello/db"
-	"io"
 	"net/http"
 )
 
+type StudentJson struct {
+	Code       uint   `json:"Code"`
+	FullName   string `json:"FullName"`
+	Gmail      string `json:"Gamil"`
+	ProfilePic string `json:"ProfilePic"`
+	Avg        uint   `json: avg`
+	Grades     []uint `json: "grades"`
+}
+
 func GetStudent(w http.ResponseWriter, r *http.Request) {
 	student := db.TestGetStudent
-	io.WriteString(w, student().FullName)
+	s := StudentJson{
+		Code:       student().Code,
+		FullName:   student().FullName,
+		Gmail:      student().Gmail,
+		ProfilePic: student().ProfilePic,
+		Avg:        student().Avg,
+		Grades:     student().Grades,
+	}
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(s)
+	if err != nil {
+		http.Error(w, "Failed to encode json", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

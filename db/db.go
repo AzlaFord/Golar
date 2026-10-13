@@ -16,7 +16,7 @@ func StartDb() {
 	ctx := context.Background()
 
 	db.AutoMigrate(&Student{})
-	err = gorm.G[Student](db).Create(ctx, &Student{Code: 0, FullName: "Victor Bivol", Gmail: "vbivol394@gmail.com", ProfilePic: "https://www.napoleon.org/wp-content/thumbnails/uploads/2006/01/t5_09ter_napoleon_fontainebleau_full-tt-width-637-height-911-crop-1-bgcolor-ffffff-lazyload-0.jpg", avg: 9, grades: [25]uint{1, 10, 10, 10, 10, 10}})
+	err = gorm.G[Student](db).Create(ctx, &Student{Code: 0, FullName: "Victor Bivol", Gmail: "vbivol394@gmail.com", ProfilePic: "https://www.napoleon.org/wp-content/thumbnails/uploads/2006/01/t5_09ter_napoleon_fontainebleau_full-tt-width-637-height-911-crop-1-bgcolor-ffffff-lazyload-0.jpg", Avg: 9, Grades: []uint{10}})
 	if err != nil {
 		panic("failed to create student")
 	}

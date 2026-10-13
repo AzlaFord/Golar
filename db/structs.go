@@ -12,12 +12,12 @@ type Class struct {
 
 type Student struct {
 	gorm.Model
-	Code       uint `gorm:"primaryKey"`
-	FullName   string
+	Code       uint   `gorm:"primaryKey" json:"Code"`
+	FullName   string `json:""`
 	Gmail      string
 	ProfilePic string
-	avg        uint
-	grades     [25]uint
+	Avg        uint
+	Grades     []uint `gorm:"serializer:json"`
 }
 type Teacher struct {
 	Code       uint `gorm:"primaryKey"`
