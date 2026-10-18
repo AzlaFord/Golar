@@ -31,5 +31,6 @@ func Server() {
 		}
 		cancelCtx()
 	}()
+	fmt.Println("Server running at localhost" + serverTwo.Addr)
 	<-ctx.Done()
 }
