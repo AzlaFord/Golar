@@ -2,12 +2,14 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
-	_"github.com/mattn/go-sqlite3"
+
+	_ "modernc.org/sqlite"
 )
 
 func Database() {
-	dbConnection, err := sql.Open("sqlite3", "./base.db")
+	dbConnection, err := sql.Open("sqlite", "./base.db")
 
 	if err != nil {
 		log.Fatal(err)
@@ -21,5 +23,15 @@ func Database() {
 	if err != nil {
 		log.Fatal("Error creating orders table", err)
 	}
+	err = taskRepository.InsertTask(Task{1, "Vreau sa fac ceva", false})
 
+	if err != nil {
+		log.Fatal("Error inserting inorders table", err)
+	}
+
+	tasks, err := taskRepository.ReadTasks()
+	if err != nil {
+		log.Fatal("Error inserting inorders table", err)
+	}
+	fmt.Println(tasks)
 }
