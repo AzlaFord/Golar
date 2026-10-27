@@ -1,6 +1,8 @@
 package db
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 type TaskRepository struct {
 	Db *sql.DB
@@ -48,9 +50,23 @@ func (r *TaskRepository) ReadTasks() ([]Task, error) {
 }
 
 func (r *TaskRepository) MarkDoneDb(id string) error {
-	_, err := r.Db.Exec(`UPDATE tasks SET Done=1 WHERE id=?`, id)
-	if err != nil {
-		return err
+
+	var task Task
+	errr := r.Db.QueryRow("SELECT done FROM tasks WHERE id =?", id).Scan(&task.Id)
+	if errr != nil {
+		return nil
+	}
+	if task.Done {
+		_, err := r.Db.Exec(`UPDATE tasks SET Done=0 WHERE id=?`, id)
+		if err != nil {
+			return err
+		}
+	}
+	if !task.Done {
+		_, err := r.Db.Exec(`UPDATE tasks SET Done=1 WHERE id=?`, id)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
