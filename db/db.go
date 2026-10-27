@@ -45,3 +45,20 @@ func GetList() ([]Task, error) {
 	}
 	return tasks, nil
 }
+
+func MarkDone(id string) error {
+
+	dbConnection, err := sql.Open("sqlite", "./base.db")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer dbConnection.Close()
+	taskRepository := &TaskRepository{Db: dbConnection}
+	err = taskRepository.MarkDoneDb(id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -46,3 +46,12 @@ func (r *TaskRepository) ReadTasks() ([]Task, error) {
 	}
 	return tasks, nil
 }
+
+func (r *TaskRepository) MarkDoneDb(id string) error {
+	_, err := r.Db.Exec(`UPDATE tasks SET Done=1 WHERE id=?`, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

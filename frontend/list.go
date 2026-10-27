@@ -28,9 +28,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "enter":
-			return m, tea.Batch(
-				tea.Printf("Let's go to %s!", m.table.SelectedRow()[1]),
-			)
+			db.MarkDone(m.table.SelectedRow()[0])
 		}
 	}
 	m.table, cmd = m.table.Update(msg)
@@ -67,7 +65,7 @@ func GenerateTable() {
 		table.WithColumns(columns),
 		table.WithRows(tableRows),
 		table.WithFocused(true),
-		table.WithHeight(7),
+		table.WithHeight(20),
 		table.WithWidth(42),
 	)
 
