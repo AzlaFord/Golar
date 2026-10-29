@@ -3,22 +3,13 @@ package db
 import (
 	"database/sql"
 	"log"
-
-	_ "modernc.org/sqlite"
 )
 
-func Database() {
-	dbConnection, err := sql.Open("sqlite", "./base.db")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer dbConnection.Close()
+func Database(dbConnection *sql.DB) {
 
 	taskRepository := &TaskRepository{Db: dbConnection}
 
-	err = taskRepository.CreateTable()
+	err := taskRepository.CreateTable()
 	if err != nil {
 		log.Fatal("Error creating orders table", err)
 	}
@@ -29,15 +20,8 @@ func Database() {
 	// }
 
 }
-func GetList() ([]Task, error) {
+func GetList(dbConnection *sql.DB) ([]Task, error) {
 
-	dbConnection, err := sql.Open("sqlite", "./base.db")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer dbConnection.Close()
 	taskRepository := &TaskRepository{Db: dbConnection}
 	tasks, err := taskRepository.ReadTasks()
 	if err != nil {
@@ -46,17 +30,10 @@ func GetList() ([]Task, error) {
 	return tasks, nil
 }
 
-func MarkDone(id string) error {
+func MarkDone(id string, dbConnection *sql.DB) error {
 
-	dbConnection, err := sql.Open("sqlite", "./base.db")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer dbConnection.Close()
 	taskRepository := &TaskRepository{Db: dbConnection}
-	err = taskRepository.MarkDoneDb(id)
+	err := taskRepository.MarkDoneDb(id)
 	if err != nil {
 		return err
 	}

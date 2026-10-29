@@ -4,6 +4,7 @@ import (
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"database/sql"
 	"example/speedrun/db"
 	"fmt"
 	"log"
@@ -15,7 +16,8 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type model struct {
-	table table.Model
+	table        table.Model
+	dbconnection *sql.DB
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -28,7 +30,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "enter":
-			db.MarkDone(m.table.SelectedRow()[0])
+			db.MarkDone(m.table.SelectedRow()[0], m.dbconnection)
+			m.View()
 		}
 	}
 	m.table, cmd = m.table.Update(msg)
@@ -39,18 +42,17 @@ func (m model) View() tea.View {
 	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
 }
 
-func GenerateTable() {
+func GenerateTable(dbconnection *sql.DB) {
 	columns := []table.Column{
 		{Title: "ID", Width: 7},
 		{Title: "Description", Width: 15},
 		{Title: "Done", Width: 10},
 	}
 
-	tasks, err := db.GetList()
+	tasks, err := db.GetList(dbconnection)
 	if err != nil {
 		log.Fatal("Error inserting inorders table", err)
 	}
-	fmt.Println(tasks)
 	var tableRows []table.Row
 	for _, task := range tasks {
 		row := table.Row{
@@ -81,7 +83,7 @@ func GenerateTable() {
 		Bold(false)
 	t.SetStyles(s)
 
-	m := model{t}
+	m := model{t, dbconnection}
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)

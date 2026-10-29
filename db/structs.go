@@ -52,9 +52,9 @@ func (r *TaskRepository) ReadTasks() ([]Task, error) {
 func (r *TaskRepository) MarkDoneDb(id string) error {
 
 	var task Task
-	errr := r.Db.QueryRow("SELECT done FROM tasks WHERE id =?", id).Scan(&task.Id)
+	errr := r.Db.QueryRow("SELECT * FROM tasks WHERE id =?", id).Scan(&task.Id, &task.Description, &task.Done)
 	if errr != nil {
-		return nil
+		return errr
 	}
 	if task.Done {
 		_, err := r.Db.Exec(`UPDATE tasks SET Done=0 WHERE id=?`, id)
