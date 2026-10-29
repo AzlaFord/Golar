@@ -30,12 +30,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "enter":
-			db.MarkDone(m.table.SelectedRow()[0], m.dbconnection)
-			m.View()
+			err := db.MarkDone(m.table.SelectedRow()[0], m.dbconnection)
+			if err != nil {
+				fmt.Println(err)
+			}
+			m.updateTask()
+
 		}
 	}
 	m.table, cmd = m.table.Update(msg)
 	return m, cmd
+}
+
+func (m model) updateTask() {
+	highLightedRow := m.table.SelectedRow()
+	highLightedRow[2] = "false"
+	fmt.Println(highLightedRow)
 }
 
 func (m model) View() tea.View {
