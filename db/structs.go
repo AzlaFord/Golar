@@ -1,7 +1,10 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
+	"time"
 )
 
 type TaskRepository struct {
@@ -47,6 +50,21 @@ func (r *TaskRepository) ReadTasks() ([]Task, error) {
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+func (r *TaskRepository) DeleteDoneTasks() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	query := `DELETE FROM tasks WHERE Done = ?;`
+
+	_, err := r.Db.ExecContext(ctx, query, 1)
+	if err != nil {
+		return fmt.Errorf("execute delete failed: %w", err)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to retrieve rows affected: %w", err)
+	}
+	return nil
 }
 
 func (r *TaskRepository) MarkDoneDb(id string) error {

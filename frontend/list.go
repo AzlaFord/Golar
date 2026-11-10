@@ -14,6 +14,14 @@ import (
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
+var (
+	titleStyle = lipgloss.NewStyle().
+		Background(lipgloss.Color("62")).
+		Foreground(lipgloss.Color("230")).
+		Padding(0, 1).
+		MarginBottom(1).
+		Bold(true)
+)
 
 type model struct {
 	table        table.Model
@@ -29,6 +37,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "r":
+			err := db.ClearDoneTasks(m.dbconnection)
+			if err != nil {
+				fmt.Println(err)
+				return m, cmd
+			}
+			fmt.Println("sa apesat R")
 		case "enter":
 			err := db.MarkDone(m.table.SelectedRow()[0], m.dbconnection)
 			if err != nil {
@@ -44,12 +59,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) updateTask() {
 	highLightedRow := m.table.SelectedRow()
-	highLightedRow[2] = "false"
+	if highLightedRow[2] == "false" {
+		highLightedRow[2] = "true"
+	} else {
+		highLightedRow[2] = "false"
+	}
+
 	fmt.Println(highLightedRow)
 }
 
 func (m model) View() tea.View {
-	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
+	s := titleStyle.Render("TODO MANAGER") + "\n"
+	return tea.NewView(s + "\n" + baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
 }
 
 func GenerateTable(dbconnection *sql.DB) {

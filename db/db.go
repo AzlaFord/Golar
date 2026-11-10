@@ -13,13 +13,8 @@ func Database(dbConnection *sql.DB) {
 	if err != nil {
 		log.Fatal("Error creating orders table", err)
 	}
-	// err = taskRepository.InsertTask(Task{1, "Altceva sa fac ceva, sa fac", false})
-
-	// if err != nil {
-	// 	log.Fatal("Error inserting inorders table", err)
-	// }
-
 }
+
 func GetList(dbConnection *sql.DB) ([]Task, error) {
 
 	taskRepository := &TaskRepository{Db: dbConnection}
@@ -30,6 +25,15 @@ func GetList(dbConnection *sql.DB) ([]Task, error) {
 	return tasks, nil
 }
 
+func ClearDoneTasks(dbConnection *sql.DB) error {
+	TaskRepository := &TaskRepository{Db: dbConnection}
+
+	err := TaskRepository.DeleteDoneTasks()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func MarkDone(id string, dbConnection *sql.DB) error {
 
 	taskRepository := &TaskRepository{Db: dbConnection}
