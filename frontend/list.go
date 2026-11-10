@@ -1,15 +1,18 @@
 package frontend
 
 import (
-	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"database/sql"
 	"example/speedrun/db"
 	"fmt"
+	"io"
 	"log"
-	"os"
+	"strings"
 )
+
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
@@ -23,100 +26,152 @@ var (
 		Bold(true)
 )
 
+const listHeight = 14
+
+type item struct {
+	id, Description, Done string
+}
+type styles struct {
+	title        lipgloss.Style
+	item         lipgloss.Style
+	selectedItem lipgloss.Style
+	pagination   lipgloss.Style
+	help         lipgloss.Style
+	quitText     lipgloss.Style
+}
+
+func newStyles(darkBG bool) styles {
+	var s styles
+	s.title = lipgloss.NewStyle().MarginLeft(2)
+	s.item = lipgloss.NewStyle().PaddingLeft(4)
+	s.selectedItem = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
+	s.pagination = list.DefaultStyles(darkBG).PaginationStyle.PaddingLeft(4)
+	s.help = list.DefaultStyles(darkBG).HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	s.quitText = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	return s
+}
+
+func (i item) FilterValue() string       { return "" }
+func (i item) Id() string                { return i.id }
+func (i item) DescriptionMethod() string { return i.Description }
+func (i item) DoneMethod() string        { return i.Done }
+
+type itemDelegate struct {
+	styles *styles
+}
+
+func (m *model) updateStyles(isDark bool) {
+	m.styles = newStyles(isDark)
+	m.list.Styles.Title = m.styles.title
+	m.list.Styles.PaginationStyle = m.styles.pagination
+	m.list.Styles.HelpStyle = m.styles.help
+	m.list.SetDelegate(itemDelegate{styles: &m.styles})
+}
+
+func (d itemDelegate) Height() int                             { return 1 }
+func (d itemDelegate) Spacing() int                            { return 0 }
+func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(item)
+	if !ok {
+		return
+	}
+
+	str := fmt.Sprintf("%d. %s", index+1, i)
+
+	fn := d.styles.item.Render
+	if index == m.Index() {
+		fn = func(s ...string) string {
+			return d.styles.selectedItem.Render("> " + strings.Join(s, " "))
+		}
+	}
+
+	fmt.Fprint(w, fn(str))
+}
+
 type model struct {
-	table        table.Model
+	items        []db.Task
+	list         list.Model
 	dbconnection *sql.DB
+	choice       string
+	styles       styles
+	quitting     bool
 }
 
 func (m model) Init() tea.Cmd { return nil }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		case "r":
-			err := db.ClearDoneTasks(m.dbconnection)
-			if err != nil {
-				fmt.Println(err)
-				return m, cmd
-			}
-			fmt.Println("sa apesat R")
-		case "enter":
-			err := db.MarkDone(m.table.SelectedRow()[0], m.dbconnection)
-			if err != nil {
-				fmt.Println(err)
-			}
-			m.updateTask()
-
-		}
-	}
-	m.table, cmd = m.table.Update(msg)
-	return m, cmd
-}
-
-func (m model) updateTask() {
-	highLightedRow := m.table.SelectedRow()
-	if highLightedRow[2] == "false" {
-		highLightedRow[2] = "true"
-	} else {
-		highLightedRow[2] = "false"
-	}
-
-	fmt.Println(highLightedRow)
-}
-
 func (m model) View() tea.View {
 	s := titleStyle.Render("TODO MANAGER") + "\n"
-	return tea.NewView(s + "\n" + baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
+	helpStr := "\ni: insert • enter: toggle • r: clear list • q: quit"
+	if m.choice != "" {
+		return tea.NewView(m.styles.quitText.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice)))
+	}
+	if m.quitting {
+		return tea.NewView(m.styles.quitText.Render("Not hungry? That’s cool."))
+	}
+	return tea.NewView(s + "\n" + m.list.View() + helpStr + "\n")
 }
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-func GenerateTable(dbconnection *sql.DB) {
-	columns := []table.Column{
-		{Title: "ID", Width: 7},
-		{Title: "Description", Width: 15},
-		{Title: "Done", Width: 10},
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "r":
+			sel, err := m.list.SelectedItem().(item)
+			if !err {
+				return m, nil
+			}
+			if err := db.MarkDone(sel.id, m.dbconnection); err != nil {
+				log.Println(err)
+				return m, nil
+			}
+			tasks, errs := db.GetList(m.dbconnection)
+			if errs == nil {
+				idx := m.list.Index()
+				m.list.SetItems(toItems(tasks))
+				m.list.Select(idx)
+			}
+		}
+	case tea.WindowSizeMsg:
+		h, v := docStyle.GetFrameSize()
+		m.list.SetSize(msg.Width-h, msg.Height-v)
 	}
 
+	return m, cmd
+}
+func toItems(tasks []db.Task) []list.Item {
+	items := make([]list.Item, 0, len(tasks))
+	for _, t := range tasks {
+		items = append(items, item{
+			id:          fmt.Sprintf("%d", t.Id),
+			Description: t.Description,
+			Done:        fmt.Sprintf("%t", t.Done),
+		})
+	}
+	return items
+}
+func GenerateTable(dbconnection *sql.DB, tasks []db.Task) model {
+
+	var tableRows []list.Item
+	tableRows = toItems(tasks)
+	const defaultWidth = 20
+
+	l := list.New(tableRows, itemDelegate{}, defaultWidth, listHeight)
+	l.Title = "What do you want for dinner?"
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+
+	m := model{list: l, dbconnection: dbconnection}
+	m.updateStyles(true) // default to dark styles.
+	return m
+}
+
+func LoadTasks(dbconnection *sql.DB) ([]db.Task, error) {
 	tasks, err := db.GetList(dbconnection)
 	if err != nil {
 		log.Fatal("Error inserting inorders table", err)
 	}
-	var tableRows []table.Row
-	for _, task := range tasks {
-		row := table.Row{
-			fmt.Sprintf("%d", task.Id),
-			task.Description,
-			fmt.Sprintf("%t", task.Done),
-		}
-		tableRows = append(tableRows, row)
-	}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(tableRows),
-		table.WithFocused(true),
-		table.WithHeight(20),
-		table.WithWidth(42),
-	)
-
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(s)
-
-	m := model{t, dbconnection}
-	if _, err := tea.NewProgram(m).Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	}
+	return tasks, nil
 }
