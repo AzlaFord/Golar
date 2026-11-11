@@ -24,6 +24,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	m := frontend.GenerateTable(DbConnection, tasks)
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)

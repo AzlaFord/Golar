@@ -25,10 +25,13 @@ func (r *TaskRepository) CreateTable() error {
 	return err
 }
 
-func (r *TaskRepository) InsertTask(task Task) error {
-	_, err := r.Db.Exec(`INSERT INTO tasks (description,done) VALUES(?,?)`, task.Description, task.Done)
+func (r *TaskRepository) InsertTask(task string) error {
+	_, err := r.Db.Exec(`INSERT INTO tasks (description,done) VALUES(?,?)`, task, 0)
 
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *TaskRepository) ReadTasks() ([]Task, error) {

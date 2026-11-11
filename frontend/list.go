@@ -133,6 +133,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.list.SetItems(toItems(tasks))
 				m.list.Select(idx)
 			}
+		case "i":
+			err := db.AddTask(m.dbconnection, "ceva")
+			if err != nil {
+				return m, nil
+			}
+			tasks, errs := db.GetList(m.dbconnection)
+			if errs == nil {
+				idx := m.list.Index()
+				m.list.SetItems(toItems(tasks))
+				m.list.Select(idx)
+			}
 		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
@@ -141,6 +152,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, cmd
 }
+
 func toItems(tasks []db.Task) []list.Item {
 	items := make([]list.Item, 0, len(tasks))
 	for _, t := range tasks {
@@ -152,6 +164,7 @@ func toItems(tasks []db.Task) []list.Item {
 	}
 	return items
 }
+
 func GenerateTable(dbconnection *sql.DB, tasks []db.Task) model {
 
 	var tableRows []list.Item

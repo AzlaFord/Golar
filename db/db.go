@@ -15,6 +15,16 @@ func Database(dbConnection *sql.DB) {
 	}
 }
 
+func AddTask(dbConnection *sql.DB, task string) error {
+
+	taskRepository := &TaskRepository{Db: dbConnection}
+	err := taskRepository.InsertTask(task)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetList(dbConnection *sql.DB) ([]Task, error) {
 
 	taskRepository := &TaskRepository{Db: dbConnection}
@@ -27,7 +37,6 @@ func GetList(dbConnection *sql.DB) ([]Task, error) {
 
 func ClearDoneTasks(dbConnection *sql.DB) error {
 	TaskRepository := &TaskRepository{Db: dbConnection}
-
 	err := TaskRepository.DeleteDoneTasks()
 	if err != nil {
 		return err
