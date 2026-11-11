@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"database/sql"
@@ -22,12 +23,16 @@ var (
 		Background(lipgloss.Color("62")).
 		Foreground(lipgloss.Color("230")).
 		Padding(0, 1).
-		MarginBottom(1).
+		MarginBottom(0).
+		MarginTop(0).
 		Bold(true)
 )
 
 const listHeight = 14
 
+type (
+	errMsg error
+)
 type item struct {
 	id, Description, Done string
 }
@@ -44,7 +49,7 @@ func newStyles(darkBG bool) styles {
 	var s styles
 	s.title = lipgloss.NewStyle().MarginLeft(2)
 	s.item = lipgloss.NewStyle().PaddingLeft(4)
-	s.selectedItem = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
+	s.selectedItem = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("140"))
 	s.pagination = list.DefaultStyles(darkBG).PaginationStyle.PaddingLeft(4)
 	s.help = list.DefaultStyles(darkBG).HelpStyle.PaddingLeft(4).PaddingBottom(1)
 	s.quitText = lipgloss.NewStyle().Margin(1, 0, 2, 4)
@@ -94,30 +99,55 @@ type model struct {
 	list         list.Model
 	dbconnection *sql.DB
 	choice       string
+	textInput    textinput.Model
+	err          error
 	styles       styles
 	quitting     bool
+	showInput    bool
 }
 
-func (m model) Init() tea.Cmd { return nil }
+func (m model) Init() tea.Cmd {
+	return textinput.Blink
+}
 
 func (m model) View() tea.View {
-	s := titleStyle.Render("TODO MANAGER") + "\n"
+	var c *tea.Cursor
+	if !m.textInput.VirtualCursor() {
+		c = m.textInput.Cursor()
+		c.Y += lipgloss.Height(m.headerView())
+	}
+
+	str := lipgloss.JoinVertical(lipgloss.Top, m.headerView(), m.textInput.View(), m.footerView())
+	if m.quitting {
+		str += "\n"
+	}
+
+	s := titleStyle.Render("TODO MANAGER")
 	helpStr := "\ni: insert • enter: toggle • r: clear list • q: quit"
 	if m.choice != "" {
 		return tea.NewView(m.styles.quitText.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice)))
 	}
-	if m.quitting {
-		return tea.NewView(m.styles.quitText.Render("Not hungry? That’s cool."))
+	if m.showInput {
+		pos := lipgloss.JoinVertical(lipgloss.Center, m.textInput.View()+helpStr)
+		return tea.NewView(s + "\n" + pos)
+	} else {
+		pos := lipgloss.JoinVertical(lipgloss.Center, m.list.View()+helpStr)
+		return tea.NewView(s + "\n" + pos)
 	}
-	return tea.NewView(s + "\n" + m.list.View() + helpStr + "\n")
 }
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
+	m.textInput, cmd = m.textInput.Update(msg)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "q":
+			if !m.showInput {
+				m.quitting = true
+				return m, tea.Quit
+			}
 		case "r":
 			sel, err := m.list.SelectedItem().(item)
 			if !err {
@@ -134,22 +164,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.list.Select(idx)
 			}
 		case "i":
-			err := db.AddTask(m.dbconnection, "ceva")
-			if err != nil {
-				return m, nil
+			if !m.showInput {
+				m.textInput.Focus()
+				m.showInput = true
+				err := db.AddTask(m.dbconnection, "ceva")
+				if err != nil {
+					return m, nil
+				}
+				tasks, errs := db.GetList(m.dbconnection)
+				for _, t := range tasks {
+					fmt.Println(t.Description)
+				}
+				if errs == nil {
+					idx := m.list.Index()
+					m.list.SetItems(toItems(tasks))
+					m.list.Select(idx)
+				}
+				fmt.Printf("m.textInput: %v\n", m.textInput)
 			}
-			tasks, errs := db.GetList(m.dbconnection)
-			if errs == nil {
-				idx := m.list.Index()
-				m.list.SetItems(toItems(tasks))
-				m.list.Select(idx)
+		case "esc":
+			if m.showInput {
+				m.textInput.SetValue("")
+				m.showInput = false
 			}
 		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 	}
-
 	return m, cmd
 }
 
@@ -157,7 +199,6 @@ func toItems(tasks []db.Task) []list.Item {
 	items := make([]list.Item, 0, len(tasks))
 	for _, t := range tasks {
 		items = append(items, item{
-			id:          fmt.Sprintf("%d", t.Id),
 			Description: t.Description,
 			Done:        fmt.Sprintf("%t", t.Done),
 		})
@@ -166,17 +207,20 @@ func toItems(tasks []db.Task) []list.Item {
 }
 
 func GenerateTable(dbconnection *sql.DB, tasks []db.Task) model {
+	ti := textinput.New()
+	ti.Placeholder = "Task name..."
+	ti.CharLimit = 156
 
 	var tableRows []list.Item
 	tableRows = toItems(tasks)
 	const defaultWidth = 20
 
 	l := list.New(tableRows, itemDelegate{}, defaultWidth, listHeight)
-	l.Title = "What do you want for dinner?"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-
-	m := model{list: l, dbconnection: dbconnection}
+	l.SetShowTitle(false)
+	l.SetShowHelp(false)
+	m := model{list: l, dbconnection: dbconnection, textInput: ti}
 	m.updateStyles(true) // default to dark styles.
 	return m
 }
@@ -188,3 +232,5 @@ func LoadTasks(dbconnection *sql.DB) ([]db.Task, error) {
 	}
 	return tasks, nil
 }
+func (m model) headerView() string { return "What is on your mind ?\n" }
+func (m model) footerView() string { return "\n(esc to quit)" }
