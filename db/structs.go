@@ -64,9 +64,6 @@ func (r *TaskRepository) DeleteDoneTasks() error {
 	if err != nil {
 		return fmt.Errorf("execute delete failed: %w", err)
 	}
-	if err != nil {
-		return fmt.Errorf("failed to retrieve rows affected: %w", err)
-	}
 	return nil
 }
 

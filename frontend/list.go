@@ -58,7 +58,6 @@ func newStyles(darkBG bool) styles {
 }
 
 func (i item) FilterValue() string       { return "" }
-func (i item) Id() string                { return i.id }
 func (i item) DescriptionMethod() string { return i.Description }
 func (i item) DoneMethod() string        { return i.Done }
 
