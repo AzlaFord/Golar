@@ -70,21 +70,21 @@ func (r *TaskRepository) DeleteDoneTasks() error {
 	return nil
 }
 
-func (r *TaskRepository) MarkDoneDb(id string) error {
+func (r *TaskRepository) MarkDoneDb(description string) error {
 
 	var task Task
-	errr := r.Db.QueryRow("SELECT * FROM tasks WHERE id =?", id).Scan(&task.Id, &task.Description, &task.Done)
+	errr := r.Db.QueryRow("SELECT * FROM tasks WHERE description =?", description).Scan(&task.Id, &task.Description, &task.Done)
 	if errr != nil {
 		return errr
 	}
 	if task.Done {
-		_, err := r.Db.Exec(`UPDATE tasks SET Done=0 WHERE id=?`, id)
+		_, err := r.Db.Exec(`UPDATE tasks SET Done=0 WHERE description=?`, description)
 		if err != nil {
 			return err
 		}
 	}
 	if !task.Done {
-		_, err := r.Db.Exec(`UPDATE tasks SET Done=1 WHERE id=?`, id)
+		_, err := r.Db.Exec(`UPDATE tasks SET Done=1 WHERE description=?`, description)
 		if err != nil {
 			return err
 		}

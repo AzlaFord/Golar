@@ -1,16 +1,17 @@
 package frontend
 
 import (
-	"charm.land/bubbles/v2/list"
-	"charm.land/bubbles/v2/textinput"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"database/sql"
 	"example/speedrun/db"
 	"fmt"
 	"io"
 	"log"
 	"strings"
+
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -123,12 +124,13 @@ func (m model) View() tea.View {
 	}
 
 	s := titleStyle.Render("TODO MANAGER")
-	helpStr := "\ni: insert • enter: toggle • r: clear list • q: quit"
+	helpStr := "\ni: insert • r: toggle • c: clear list • q: quit"
+	helpStrInsertMode := "\nenter: add task • esc: leave insert mode"
 	if m.choice != "" {
 		return tea.NewView(m.styles.quitText.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice)))
 	}
 	if m.showInput {
-		pos := lipgloss.JoinVertical(lipgloss.Center, m.textInput.View()+helpStr)
+		pos := lipgloss.JoinVertical(lipgloss.Center, m.textInput.View()+helpStrInsertMode)
 		return tea.NewView(s + "\n" + pos)
 	} else {
 		pos := lipgloss.JoinVertical(lipgloss.Center, m.list.View()+helpStr)
@@ -150,11 +152,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "r":
 			sel, err := m.list.SelectedItem().(item)
-			fmt.Println(sel)
 			if !err {
 				return m, nil
 			}
-			if err := db.MarkDone(sel.id, m.dbconnection); err != nil {
+			if err := db.MarkDone(sel.Description, m.dbconnection); err != nil {
 				log.Println(err)
 				return m, nil
 			}
@@ -164,6 +165,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.list.SetItems(toItems(tasks))
 				m.list.Select(idx)
 			}
+		case "c":
+			err := db.ClearDoneTasks(m.dbconnection)
+			if err != nil {
+				fmt.Println(err)
+				return m, nil
+			}
+			tasks, errs := db.GetList(m.dbconnection)
+			if errs == nil {
+				idx := m.list.Index()
+				m.list.SetItems(toItems(tasks))
+				m.list.Select(idx)
+			}
+			return m, nil
 		case "i":
 			if !m.showInput {
 				m.textInput.Focus()
@@ -178,9 +192,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textInput.Reset()
 				m.showInput = false
 				tasks, errs := db.GetList(m.dbconnection)
-				for _, t := range tasks {
-					fmt.Println(t.Description)
-				}
 				if errs == nil {
 					idx := m.list.Index()
 					m.list.SetItems(toItems(tasks))

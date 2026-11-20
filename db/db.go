@@ -43,10 +43,10 @@ func ClearDoneTasks(dbConnection *sql.DB) error {
 	}
 	return nil
 }
-func MarkDone(id string, dbConnection *sql.DB) error {
+func MarkDone(description string, dbConnection *sql.DB) error {
 
 	taskRepository := &TaskRepository{Db: dbConnection}
-	err := taskRepository.MarkDoneDb(id)
+	err := taskRepository.MarkDoneDb(description)
 	if err != nil {
 		return err
 	}
