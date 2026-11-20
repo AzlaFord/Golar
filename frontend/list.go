@@ -143,13 +143,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q":
+		case "q", "ctrl+c":
 			if !m.showInput {
 				m.quitting = true
 				return m, tea.Quit
 			}
 		case "r":
 			sel, err := m.list.SelectedItem().(item)
+			fmt.Println(sel)
 			if !err {
 				return m, nil
 			}
@@ -167,10 +168,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.showInput {
 				m.textInput.Focus()
 				m.showInput = true
-				err := db.AddTask(m.dbconnection, "ceva")
+			}
+		case "enter":
+			if m.showInput {
+				err := db.AddTask(m.dbconnection, m.textInput.Value())
 				if err != nil {
 					return m, nil
 				}
+				m.textInput.Reset()
+				m.showInput = false
 				tasks, errs := db.GetList(m.dbconnection)
 				for _, t := range tasks {
 					fmt.Println(t.Description)
@@ -180,12 +186,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.list.SetItems(toItems(tasks))
 					m.list.Select(idx)
 				}
-				fmt.Printf("m.textInput: %v\n", m.textInput)
+				return m, nil
 			}
 		case "esc":
 			if m.showInput {
-				m.textInput.SetValue("")
+				m.textInput.Reset()
 				m.showInput = false
+				return m, nil
 			}
 		}
 	case tea.WindowSizeMsg:
